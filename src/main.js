@@ -59,6 +59,11 @@ class GoogleAppsScriptClient {
   }
 
   async makeRequest(method, path = '', data = null, attempt = 1) {
+    // Use JSONP for Google Apps Script GET requests to avoid CORS issues
+    if (method.toLowerCase() === 'get' && this.baseUrl.includes('script.google.com')) {
+      return this.makeJSONPRequest(path, data, attempt);
+    }
+
     try {
       const url = path ? `${this.baseUrl}/${path}` : this.baseUrl;
       const config = { method, url };
@@ -90,6 +95,92 @@ class GoogleAppsScriptClient {
         details: error.response?.data || null
       };
     }
+  }
+
+  async makeJSONPRequest(path = '', params = {}, attempt = 1) {
+    return new Promise((resolve) => {
+      try {
+        const callbackName = 'jsonp_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+        // Build URL with parameters
+        const url = new URL(this.baseUrl);
+        if (path) url.searchParams.set('path', path);
+        Object.keys(params).forEach(key => {
+          url.searchParams.set(key, params[key]);
+        });
+        url.searchParams.set('callback', callbackName);
+
+        console.log('JSONP Request:', 'GET', url.toString());
+
+        // Create callback function
+        window[callbackName] = (data) => {
+          console.log('JSONP Response received:', data);
+          // Cleanup
+          document.head.removeChild(script);
+          delete window[callbackName];
+
+          resolve({
+            success: true,
+            data: data,
+            status: 200,
+            method: 'JSONP'
+          });
+        };
+
+        // Create script tag
+        const script = document.createElement('script');
+        script.src = url.toString();
+        script.onerror = () => {
+          console.error(`JSONP request failed (attempt ${attempt})`);
+
+          // Cleanup
+          document.head.removeChild(script);
+          delete window[callbackName];
+
+          // Retry logic
+          if (attempt < this.retryAttempts) {
+            console.log(`Retrying JSONP request... (${attempt + 1}/${this.retryAttempts})`);
+            setTimeout(() => {
+              this.makeJSONPRequest(path, params, attempt + 1).then(resolve);
+            }, 1000 * attempt);
+          } else {
+            resolve({
+              success: false,
+              error: 'JSONP request failed',
+              status: 0,
+              details: 'Network error or script loading failed'
+            });
+          }
+        };
+
+        // Set timeout for JSONP request
+        setTimeout(() => {
+          if (window[callbackName]) {
+            console.error('JSONP request timed out');
+            document.head.removeChild(script);
+            delete window[callbackName];
+
+            resolve({
+              success: false,
+              error: 'Request timed out',
+              status: 0,
+              details: 'JSONP request exceeded timeout'
+            });
+          }
+        }, this.timeout);
+
+        document.head.appendChild(script);
+
+      } catch (error) {
+        console.error('JSONP setup error:', error);
+        resolve({
+          success: false,
+          error: error.message,
+          status: 0,
+          details: 'JSONP setup failed'
+        });
+      }
+    });
   }
 
   isRetryableError(error) {

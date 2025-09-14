@@ -19,29 +19,55 @@ function doGet(e) {
   try {
     const params = e.parameter || {};
     const path = e.pathInfo || '';
+    const callback = params.callback;
+
+    let responseData;
 
     // Handle different API endpoints
     switch (path) {
       case 'health':
-        return createCORSResponse({
+        responseData = {
           status: 'healthy',
           timestamp: new Date().toISOString(),
           version: WFGY_CONFIG.api_version
-        });
+        };
+        break;
 
       case 'data':
-        return handleDataRequest(params);
+        responseData = {
+          users: [
+            { id: 1, name: 'John Doe', email: 'john@example.com' },
+            { id: 2, name: 'Jane Smith', email: 'jane@example.com' }
+          ],
+          timestamp: new Date().toISOString(),
+          source: 'google-apps-script',
+          filter_applied: params.filter || null,
+          wfgy_version: WFGY_CONFIG.core_version
+        };
+        break;
 
       default:
-        return createCORSResponse({
+        responseData = {
           message: 'API Ready',
           endpoints: ['/health', '/data'],
           version: WFGY_CONFIG.api_version,
           cors_enabled: WFGY_CONFIG.cors_enabled
-        });
+        };
     }
+
+    // Handle JSONP callback for CORS compatibility with GitHub Pages
+    if (callback) {
+      const jsonpResponse = callback + '(' + JSON.stringify(responseData) + ');';
+      console.log('JSONP Response for callback:', callback, 'Data:', JSON.stringify(responseData));
+      return ContentService
+        .createTextOutput(jsonpResponse)
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+
+    return createCORSResponse(responseData);
   } catch (error) {
-    return createErrorResponse(error);
+    const callback = (e.parameter && e.parameter.callback) || null;
+    return createErrorResponse(error, callback);
   }
 }
 
@@ -74,26 +100,6 @@ function doPost(e) {
   }
 }
 
-/**
- * Handles data retrieval requests
- */
-function handleDataRequest(params) {
-  const sampleData = {
-    users: [
-      { id: 1, name: 'John Doe', email: 'john@example.com' },
-      { id: 2, name: 'Jane Smith', email: 'jane@example.com' }
-    ],
-    timestamp: new Date().toISOString(),
-    source: 'google-apps-script'
-  };
-
-  // Apply filters if provided
-  if (params.filter) {
-    sampleData.filter_applied = params.filter;
-  }
-
-  return createCORSResponse(sampleData);
-}
 
 /**
  * Handles form submission requests
@@ -167,15 +173,24 @@ function createCORSResponse(data) {
 }
 
 /**
- * Creates error response with proper CORS headers
+ * Creates error response with proper CORS headers and JSONP support
  */
-function createErrorResponse(error) {
+function createErrorResponse(error, callback = null) {
   const errorData = {
     error: true,
+    success: false,
     message: error.message || 'Unknown error occurred',
     timestamp: new Date().toISOString(),
     stack: error.stack || 'No stack trace available'
   };
+
+  // Handle JSONP callback for errors too
+  if (callback) {
+    const jsonpResponse = callback + '(' + JSON.stringify(errorData) + ');';
+    return ContentService
+      .createTextOutput(jsonpResponse)
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
 
   const output = ContentService
     .createTextOutput(JSON.stringify(errorData, null, 2))
@@ -189,10 +204,8 @@ function createErrorResponse(error) {
  * Essential for GitHub Pages integration
  */
 function addCORSHeaders(output) {
-  // Google Apps Script doesn't support custom headers in ContentService
-  // CORS is handled by returning proper JSON content
-  // The CORS headers are automatically added by Google Apps Script when deployed as web app with "Anyone" access
-
+  // Google Apps Script supports JSONP for CORS, but we'll use a different approach
+  // We need to handle the CORS preflight request properly
   return output;
 }
 
