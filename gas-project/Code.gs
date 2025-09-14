@@ -18,8 +18,12 @@ const WFGY_CONFIG = {
 function doGet(e) {
   try {
     const params = e.parameter || {};
-    const path = e.pathInfo || '';
+    const path = params.path || e.pathInfo || '';
     const callback = params.callback;
+
+    // Log for debugging
+    console.log('doGet called with params:', JSON.stringify(params));
+    console.log('Path:', path, 'Callback:', callback);
 
     let responseData;
 
