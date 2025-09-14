@@ -370,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('WFGY Framework Version:', WFGY_CONFIG.core_version);
 
   // Initialize API client and UI
-  const defaultApiUrl = 'https://script.google.com/macros/s/AKfycbwbuNFKWOI4ssCT307_ocDYlryAUMl21qSscrGdH2q6ta5hRja3KukhHJPvO3fQ5NM8Jw/exec';
+  const defaultApiUrl = 'https://script.google.com/macros/s/AKfycbzcTKYpzL-x1CjbuhyoWSSIXLfqqgQE2IEWeUvImuw36EImuXwOvRIMOLB9G0fzZRAv-g/exec';
   const apiClient = new StatusChatClient(defaultApiUrl);
   const chatUI = new StatusChatUI(apiClient);
 
