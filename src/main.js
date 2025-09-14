@@ -245,9 +245,13 @@ class GoogleAppsScriptClient {
       // Build target URL with parameters
       const targetUrl = new URL(this.baseUrl);
       if (path) targetUrl.searchParams.set('path', path);
-      Object.keys(params).forEach(key => {
-        targetUrl.searchParams.set(key, params[key]);
-      });
+      if (params && typeof params === 'object') {
+        Object.keys(params).forEach(key => {
+          if (params[key] !== undefined && params[key] !== null) {
+            targetUrl.searchParams.set(key, params[key]);
+          }
+        });
+      }
 
       // Use allorigins.win as CORS proxy (free and reliable)
       const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl.toString())}`;
