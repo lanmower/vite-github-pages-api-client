@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Status Chat - v1.0</title>
+    <meta name="description" content="Simple status chat powered by Vite + GitHub Pages + Google Apps Script">
+  <script type="module" crossorigin src="/vite-github-pages-api-client/assets/index-Cv_wRDjw.js"></script>
+  <link rel="stylesheet" crossorigin href="/vite-github-pages-api-client/assets/index-BgypTPA3.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>💬 Live Status Chat</h1>
+            <p>Set your status and see what everyone else is up to!</p>
+            <div class="connection-status">
+                <span id="status-text">Connecting...</span>
+                <span id="status-icon">⏳</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- User Input Section -->
+            <section class="user-section">
+                <div class="user-input">
+                    <input
+                        type="text"
+                        id="username"
+                        placeholder="Your name..."
+                        maxlength="20"
+                        required
+                    >
+                    <input
+                        type="text"
+                        id="user-status"
+                        placeholder="What are you up to?"
+                        maxlength="100"
+                        required
+                    >
+                    <button id="update-status" class="primary-btn">Update Status</button>
+                </div>
+            </section>
+
+            <!-- Live Status Feed -->
+            <section class="status-feed">
+                <h2>📢 Everyone's Status</h2>
+                <div id="refresh-info">
+                    <button id="refresh-btn" class="secondary-btn">🔄 Refresh</button>
+                    <span id="last-updated">Last updated: Never</span>
+                </div>
+                <div id="status-list" class="status-container">
+                    <div class="loading-message">
+                        <span>Loading statuses...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Configuration Section (Collapsible) -->
+            <section class="config-section">
+                <details>
+                    <summary>⚙️ API Configuration</summary>
+                    <div class="config-panel">
+                        <label for="api-url">Google Apps Script URL:</label>
+                        <input
+                            type="url"
+                            id="api-url"
+                            placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
+                            value="https://script.google.com/macros/s/AKfycbwbuNFKWOI4ssCT307_ocDYlryAUMl21qSscrGdH2q6ta5hRja3KukhHJPvO3fQ5NM8Jw/exec"
+                        >
+                        <button id="save-config">Save Configuration</button>
+                    </div>
+                </details>
+            </section>
+        </main>
+
+        <footer>
+            <p>
+                <span class="framework-badge">Status Chat v1.0</span>
+                Powered by <strong>Vite + GitHub Pages + Google Apps Script</strong>
+            </p>
+            <p>
+                <span id="user-count">0 users online</span> •
+                Auto-refresh: <span id="auto-refresh-status">ON</span>
+            </p>
+        </footer>
+    </div>
+
+</body>
+</html>
