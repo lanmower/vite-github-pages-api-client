@@ -1,11 +1,10 @@
 // Live Status Chat - WFGY v2.0 Framework Integration
 import './style.css'
 
-// WFGY Configuration
-const WFGY_CONFIG = {
-  core_version: "2.0",
-  delta_s_threshold: 0.60,
-  api_timeout: 10000,
+// API Configuration
+const API_CONFIG = {
+  version: "1.0.0",
+  timeout: 10000,
   retry_attempts: 3,
   cors_mode: 'cors'
 };
@@ -14,8 +13,8 @@ const WFGY_CONFIG = {
 class StatusChatClient {
   constructor(baseUrl = '') {
     this.baseUrl = baseUrl;
-    this.timeout = WFGY_CONFIG.api_timeout;
-    this.retryAttempts = WFGY_CONFIG.retry_attempts;
+    this.timeout = API_CONFIG.timeout;
+    this.retryAttempts = API_CONFIG.retry_attempts;
     this.refreshInterval = null;
     this.autoRefreshEnabled = true;
   }
@@ -367,10 +366,10 @@ class StatusChatUI {
 // Application initialization
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🚀 Status Chat - Starting...');
-  console.log('WFGY Framework Version:', WFGY_CONFIG.core_version);
+  console.log('API Version:', API_CONFIG.version);
 
   // Initialize API client and UI
-  const defaultApiUrl = 'https://script.google.com/macros/s/AKfycbwXWylNtOGrkprV5Jv_gTeVpgMkj0TgcHc29j-f-rKPxp7QeJRc_EroGF4MBCXdFpLqTw/exec';
+  const defaultApiUrl = 'https://script.google.com/macros/s/AKfycbykbaXGYsA1INdEZUlSy02wJsGwsTdKTtFMoeB8H7c7JPzn81HKs-cu2x8DR_IOtusv-g/exec';
   const apiClient = new StatusChatClient(defaultApiUrl);
   const chatUI = new StatusChatUI(apiClient);
 
@@ -383,4 +382,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Export for debugging
-window.WFGY_CONFIG = WFGY_CONFIG;
+window.API_CONFIG = API_CONFIG;
