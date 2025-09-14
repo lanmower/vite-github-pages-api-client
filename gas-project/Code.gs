@@ -189,17 +189,9 @@ function createErrorResponse(error) {
  * Essential for GitHub Pages integration
  */
 function addCORSHeaders(output) {
-  // Allow all origins for public API (adjust as needed for security)
-  output.setHeaders({
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept, Origin',
-    'Access-Control-Allow-Credentials': 'false',
-    'Access-Control-Max-Age': '86400', // 24 hours
-    'Content-Type': 'application/json; charset=utf-8',
-    'X-API-Version': WFGY_CONFIG.api_version,
-    'X-CORS-Enabled': 'true'
-  });
+  // Google Apps Script doesn't support custom headers in ContentService
+  // CORS is handled by returning proper JSON content
+  // The CORS headers are automatically added by Google Apps Script when deployed as web app with "Anyone" access
 
   return output;
 }
