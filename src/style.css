@@ -14,282 +14,359 @@ body {
 }
 
 #app {
-    max-width: 1200px;
+    max-width: 800px;
     margin: 0 auto;
     padding: 20px;
     background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    min-height: 90vh;
     margin-top: 20px;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
 }
 
 /* Header */
 header {
     text-align: center;
-    margin-bottom: 40px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #eee;
+    margin-bottom: 30px;
+    padding: 20px 0;
+    border-bottom: 2px solid #f0f0f0;
 }
 
 header h1 {
-    font-size: 2.5em;
+    font-size: 2.5rem;
     margin-bottom: 10px;
-    color: #2c3e50;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 header p {
-    font-size: 1.1em;
+    font-size: 1.1rem;
     color: #666;
+    margin-bottom: 15px;
 }
 
-/* Main sections */
-section {
-    margin-bottom: 40px;
-    padding: 25px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-}
-
-section h2 {
-    color: #2c3e50;
-    margin-bottom: 20px;
-    font-size: 1.5em;
-    border-bottom: 2px solid #3498db;
-    padding-bottom: 8px;
-}
-
-/* Configuration panel */
-.config-panel {
-    display: flex;
-    gap: 15px;
+.connection-status {
+    display: inline-flex;
     align-items: center;
-    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border-radius: 25px;
+    border: 1px solid #e9ecef;
+    font-size: 0.9rem;
 }
 
-.config-panel label {
-    font-weight: 600;
-    color: #555;
-}
-
-.config-panel input[type="url"] {
-    flex: 1;
-    min-width: 300px;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-}
-
-/* Test groups */
-.test-group {
+/* User Input Section */
+.user-section {
     margin-bottom: 30px;
-    padding: 20px;
-    background: white;
-    border-radius: 6px;
-    border: 1px solid #dee2e6;
 }
 
-.test-group h3 {
-    color: #495057;
-    margin-bottom: 15px;
-    font-size: 1.2em;
-}
-
-/* Form styles */
-form {
-    margin-bottom: 15px;
-}
-
-.form-row {
+.user-input {
     display: flex;
-    gap: 15px;
-    margin-bottom: 15px;
+    gap: 12px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
-.form-row label {
-    display: flex;
-    flex-direction: column;
+.user-input input {
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 25px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.user-input input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#username {
+    flex: 0 0 150px;
+    min-width: 120px;
+}
+
+#user-status {
     flex: 1;
     min-width: 200px;
-    font-weight: 500;
-    color: #555;
-}
-
-.form-row input,
-.form-row textarea {
-    margin-top: 5px;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-}
-
-textarea {
-    resize: vertical;
-    font-family: 'Courier New', monospace;
-}
-
-#process-data {
-    width: 100%;
-    margin-bottom: 15px;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    background: #f8f9fa;
 }
 
 /* Buttons */
-button {
-    background: linear-gradient(135deg, #3498db, #2980b9);
+.primary-btn {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
+.primary-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.secondary-btn {
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    cursor: pointer;
     transition: all 0.3s ease;
 }
 
-button:hover {
-    background: linear-gradient(135deg, #2980b9, #1f5582);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.secondary-btn:hover {
+    background: #e9ecef;
 }
 
-button:disabled {
-    background: #95a5a6;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+/* Status Feed */
+.status-feed {
+    margin-bottom: 30px;
 }
 
-.test-btn {
-    margin-bottom: 15px;
+.status-feed h2 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    color: #495057;
 }
 
-#save-config {
-    background: linear-gradient(135deg, #27ae60, #219a52);
-}
-
-#save-config:hover {
-    background: linear-gradient(135deg, #219a52, #1e8449);
-}
-
-/* Results */
-.result {
-    background: #2c3e50;
-    color: #ecf0f1;
-    padding: 15px;
-    border-radius: 4px;
-    overflow-x: auto;
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    line-height: 1.4;
-    max-height: 300px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-
-.result:empty {
-    display: none;
-}
-
-/* Status indicator */
-.status-section {
-    text-align: center;
-}
-
-.status-indicator {
-    display: inline-flex;
+#refresh-info {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 10px;
-    padding: 15px 25px;
-    background: white;
-    border-radius: 25px;
-    border: 2px solid #ddd;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+#last-updated {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.status-container {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #f1f3f4;
+    animation: slideIn 0.3s ease;
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-user {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.status-name {
     font-weight: 600;
-    font-size: 1.1em;
+    color: #495057;
+    margin-bottom: 4px;
 }
 
-.status-indicator.connected {
-    border-color: #27ae60;
-    color: #27ae60;
+.status-message {
+    color: #6c757d;
+    font-style: italic;
 }
 
-.status-indicator.error {
-    border-color: #e74c3c;
-    color: #e74c3c;
+.status-time {
+    font-size: 0.8rem;
+    color: #adb5bd;
+    white-space: nowrap;
+    margin-left: 15px;
 }
 
-.status-indicator.loading {
-    border-color: #f39c12;
-    color: #f39c12;
+.loading-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.empty-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #adb5bd;
+}
+
+.empty-message h3 {
+    margin-bottom: 10px;
+    color: #6c757d;
+}
+
+/* Configuration Section */
+.config-section {
+    margin-bottom: 20px;
+}
+
+.config-section details {
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+}
+
+.config-section summary {
+    padding: 12px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #495057;
+    user-select: none;
+}
+
+.config-section summary:hover {
+    background: #e9ecef;
+}
+
+.config-panel {
+    padding: 20px 16px;
+    border-top: 1px solid #e9ecef;
+}
+
+.config-panel label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.config-panel input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    transition: border-color 0.3s ease;
+}
+
+.config-panel input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.config-panel button {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.config-panel button:hover {
+    background: #5a67d8;
 }
 
 /* Footer */
 footer {
     text-align: center;
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #eee;
-    color: #666;
+    padding: 20px 0;
+    border-top: 1px solid #e9ecef;
+    margin-top: 30px;
+    font-size: 0.9rem;
+    color: #6c757d;
 }
 
-footer p {
-    margin-bottom: 8px;
+.framework-badge {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-right: 10px;
 }
 
-footer a {
-    color: #3498db;
-    text-decoration: none;
-    font-weight: 500;
+/* Animations */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-footer a:hover {
-    text-decoration: underline;
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-/* Loading animation */
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.loading #status-icon {
-    animation: spin 1s linear infinite;
-}
-
-/* Responsive design */
+/* Responsive Design */
 @media (max-width: 768px) {
     #app {
         margin: 10px;
         padding: 15px;
+        border-radius: 10px;
     }
 
     header h1 {
-        font-size: 2em;
+        font-size: 2rem;
     }
 
-    .config-panel {
+    .user-input {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .config-panel input[type="url"] {
-        min-width: unset;
+    .user-input input,
+    .primary-btn {
+        width: 100%;
     }
 
-    .form-row {
+    #refresh-info {
         flex-direction: column;
+        gap: 10px;
+        text-align: center;
     }
 
-    .form-row label {
-        min-width: unset;
+    .status-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .status-time {
+        margin-left: 0;
+        margin-top: 8px;
     }
 }
+
+/* Status indicators */
+.status-online { color: #28a745; }
+.status-away { color: #ffc107; }
+.status-busy { color: #dc3545; }
+.status-offline { color: #6c757d; }

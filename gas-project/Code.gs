@@ -34,8 +34,17 @@ function doGet(e) {
           status: 'healthy',
           timestamp: new Date().toISOString(),
           version: WFGY_CONFIG.api_version,
-          message: 'Google Apps Script API is working!'
+          message: 'Status Chat API is working!',
+          wfgy_framework: WFGY_CONFIG.core_version
         };
+        break;
+
+      case 'statuses':
+        responseData = handleGetStatuses();
+        break;
+
+      case 'update-status':
+        responseData = handleUpdateStatus(params);
         break;
 
       case 'data':
@@ -56,12 +65,13 @@ function doGet(e) {
 
       default:
         responseData = {
-          message: 'API Ready - WFGY v2.0 Enabled',
-          endpoints: ['/health', '/data'],
+          message: 'Live Status Chat API - WFGY v2.0 Enabled',
+          endpoints: ['/health', '/statuses', '/update-status', '/data'],
           version: WFGY_CONFIG.api_version,
           cors_enabled: WFGY_CONFIG.cors_enabled,
           wfgy_framework: WFGY_CONFIG.core_version,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          description: 'Simple status chat powered by Google Apps Script'
         };
     }
 
@@ -247,4 +257,123 @@ function sanitizeData(data) {
     return sanitized;
   }
   return data;
+}
+
+/**
+ * Handles getting all current statuses
+ */
+function handleGetStatuses() {
+  try {
+    const properties = PropertiesService.getScriptProperties();
+    const statusesData = properties.getProperty('chat_statuses');
+
+    let statuses = [];
+    if (statusesData) {
+      statuses = JSON.parse(statusesData);
+    }
+
+    // Filter out old statuses (older than 1 hour)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    statuses = statuses.filter(status => {
+      try {
+        const statusTime = new Date(status.timestamp);
+        return statusTime > oneHourAgo;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    // Sort by most recent first
+    statuses.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    return {
+      success: true,
+      statuses: statuses,
+      count: statuses.length,
+      timestamp: new Date().toISOString(),
+      wfgy_framework: WFGY_CONFIG.core_version
+    };
+  } catch (error) {
+    console.error('Error getting statuses:', error);
+    return {
+      success: false,
+      error: 'Failed to retrieve statuses',
+      statuses: [],
+      count: 0,
+      timestamp: new Date().toISOString()
+    };
+  }
+}
+
+/**
+ * Handles updating a user's status
+ */
+function handleUpdateStatus(params) {
+  try {
+    const name = sanitizeData(params.name);
+    const status = sanitizeData(params.status);
+    const timestamp = params.timestamp || new Date().toISOString();
+
+    if (!name || !status) {
+      return {
+        success: false,
+        error: 'Name and status are required',
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    if (name.length > 20 || status.length > 100) {
+      return {
+        success: false,
+        error: 'Name must be 20 chars or less, status must be 100 chars or less',
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    const properties = PropertiesService.getScriptProperties();
+    const statusesData = properties.getProperty('chat_statuses');
+
+    let statuses = [];
+    if (statusesData) {
+      statuses = JSON.parse(statusesData);
+    }
+
+    // Remove any existing status from this user
+    statuses = statuses.filter(s => s.name !== name);
+
+    // Add new status
+    const newStatus = {
+      name: name,
+      status: status,
+      timestamp: timestamp,
+      id: Utilities.getUuid()
+    };
+
+    statuses.push(newStatus);
+
+    // Keep only the most recent 50 statuses
+    if (statuses.length > 50) {
+      statuses = statuses.slice(-50);
+    }
+
+    // Save back to properties
+    properties.setProperty('chat_statuses', JSON.stringify(statuses));
+
+    return {
+      success: true,
+      message: 'Status updated successfully',
+      status: newStatus,
+      total_statuses: statuses.length,
+      timestamp: new Date().toISOString(),
+      wfgy_framework: WFGY_CONFIG.core_version
+    };
+
+  } catch (error) {
+    console.error('Error updating status:', error);
+    return {
+      success: false,
+      error: 'Failed to update status: ' + error.message,
+      timestamp: new Date().toISOString()
+    };
+  }
 }

@@ -3,90 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vite + GitHub Pages + Google Apps Script</title>
-    <meta name="description" content="Demo integration between Vite, GitHub Pages, and Google Apps Script API">
+    <title>Live Status Chat - WFGY v2.0</title>
+    <meta name="description" content="Simple status chat powered by Vite + GitHub Pages + Google Apps Script">
     <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>
     <div id="app">
         <header>
-            <h1>🚀 Vite + GitHub Pages + Google Apps Script</h1>
-            <p>Demonstrating CORS-enabled API integration</p>
+            <h1>💬 Live Status Chat</h1>
+            <p>Set your status and see what everyone else is up to!</p>
+            <div class="connection-status">
+                <span id="status-text">Connecting...</span>
+                <span id="status-icon">⏳</span>
+            </div>
         </header>
 
         <main>
-            <section class="api-section">
-                <h2>API Endpoint Configuration</h2>
-                <div class="config-panel">
-                    <label for="api-url">Google Apps Script URL:</label>
+            <!-- User Input Section -->
+            <section class="user-section">
+                <div class="user-input">
                     <input
-                        type="url"
-                        id="api-url"
-                        placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
-                        value=""
+                        type="text"
+                        id="username"
+                        placeholder="Your name..."
+                        maxlength="20"
+                        required
                     >
-                    <button id="save-config">Save Configuration</button>
+                    <input
+                        type="text"
+                        id="user-status"
+                        placeholder="What are you up to?"
+                        maxlength="100"
+                        required
+                    >
+                    <button id="update-status" class="primary-btn">Update Status</button>
                 </div>
             </section>
 
-            <section class="testing-section">
-                <h2>API Testing Interface</h2>
-
-                <!-- Health Check -->
-                <div class="test-group">
-                    <h3>Health Check (GET)</h3>
-                    <button id="health-check" class="test-btn">Test Health Endpoint</button>
-                    <pre id="health-result" class="result"></pre>
+            <!-- Live Status Feed -->
+            <section class="status-feed">
+                <h2>📢 Everyone's Status</h2>
+                <div id="refresh-info">
+                    <button id="refresh-btn" class="secondary-btn">🔄 Refresh</button>
+                    <span id="last-updated">Last updated: Never</span>
                 </div>
-
-                <!-- Data Retrieval -->
-                <div class="test-group">
-                    <h3>Data Retrieval (GET)</h3>
-                    <button id="get-data" class="test-btn">Get Sample Data</button>
-                    <pre id="data-result" class="result"></pre>
-                </div>
-
-                <!-- Form Submission -->
-                <div class="test-group">
-                    <h3>Form Submission (POST)</h3>
-                    <form id="submit-form">
-                        <div class="form-row">
-                            <label>Name: <input type="text" name="name" required></label>
-                            <label>Email: <input type="email" name="email" required></label>
-                        </div>
-                        <div class="form-row">
-                            <label>Message: <textarea name="message" rows="3"></textarea></label>
-                        </div>
-                        <button type="submit" class="test-btn">Submit Form</button>
-                    </form>
-                    <pre id="submit-result" class="result"></pre>
-                </div>
-
-                <!-- Data Processing -->
-                <div class="test-group">
-                    <h3>Data Processing (POST)</h3>
-                    <textarea id="process-data" rows="4" placeholder='{"key": "value", "number": 123}'></textarea>
-                    <button id="process-btn" class="test-btn">Process Data</button>
-                    <pre id="process-result" class="result"></pre>
+                <div id="status-list" class="status-container">
+                    <div class="loading-message">
+                        <span>Loading statuses...</span>
+                    </div>
                 </div>
             </section>
 
-            <section class="status-section">
-                <h2>Connection Status</h2>
-                <div id="status" class="status-indicator">
-                    <span id="status-text">Not configured</span>
-                    <span id="status-icon">⚪</span>
-                </div>
+            <!-- Configuration Section (Collapsible) -->
+            <section class="config-section">
+                <details>
+                    <summary>⚙️ API Configuration</summary>
+                    <div class="config-panel">
+                        <label for="api-url">Google Apps Script URL:</label>
+                        <input
+                            type="url"
+                            id="api-url"
+                            placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
+                            value="https://script.google.com/macros/s/AKfycbwbuNFKWOI4ssCT307_ocDYlryAUMl21qSscrGdH2q6ta5hRja3KukhHJPvO3fQ5NM8Jw/exec"
+                        >
+                        <button id="save-config">Save Configuration</button>
+                    </div>
+                </details>
             </section>
         </main>
 
         <footer>
-            <p>Environment: <span id="env-info"></span></p>
-            <p>CORS Status: <span id="cors-status">Unknown</span></p>
             <p>
-                <a href="https://github.com/your-username/vite-github-pages-api-client" target="_blank">
-                    View on GitHub
-                </a>
+                <span class="framework-badge">WFGY v2.0</span>
+                Powered by <strong>Vite + GitHub Pages + Google Apps Script</strong>
+            </p>
+            <p>
+                <span id="user-count">0 users online</span> •
+                Auto-refresh: <span id="auto-refresh-status">ON</span>
             </p>
         </footer>
     </div>

@@ -1,5 +1,5 @@
-// Main application entry point with WFGY framework integration
-import axios from 'axios';
+// Live Status Chat - WFGY v2.0 Framework Integration
+import './style.css'
 
 // WFGY Configuration
 const WFGY_CONFIG = {
@@ -10,234 +10,18 @@ const WFGY_CONFIG = {
   cors_mode: 'cors'
 };
 
-// API Client Class with CORS handling
-class GoogleAppsScriptClient {
+// Status Chat Client Class with CORS Proxy
+class StatusChatClient {
   constructor(baseUrl = '') {
     this.baseUrl = baseUrl;
     this.timeout = WFGY_CONFIG.api_timeout;
     this.retryAttempts = WFGY_CONFIG.retry_attempts;
-
-    // Configure axios instance with CORS-friendly settings
-    this.client = axios.create({
-      timeout: this.timeout,
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8', // Critical for Google Apps Script CORS
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      // Disable credentials for public API
-      withCredentials: false
-    });
-
-    // Add request interceptor for logging
-    this.client.interceptors.request.use(
-      (config) => {
-        console.log('API Request:', config.method?.toUpperCase(), config.url);
-        return config;
-      },
-      (error) => {
-        console.error('Request Error:', error);
-        return Promise.reject(error);
-      }
-    );
-
-    // Add response interceptor for error handling
-    this.client.interceptors.response.use(
-      (response) => {
-        console.log('API Response:', response.status, response.config.url);
-        return response;
-      },
-      (error) => {
-        console.error('Response Error:', error.message);
-        return Promise.reject(error);
-      }
-    );
+    this.refreshInterval = null;
+    this.autoRefreshEnabled = true;
   }
 
   setBaseUrl(url) {
     this.baseUrl = url;
-  }
-
-  async makeRequest(method, path = '', data = null, attempt = 1) {
-    // Use CORS proxy for Google Apps Script GET requests to avoid CORS issues
-    if (method.toLowerCase() === 'get' && this.baseUrl.includes('script.google.com')) {
-      return this.makeCorsProxyRequest(path, data, attempt);
-    }
-
-    try {
-      const url = path ? `${this.baseUrl}/${path}` : this.baseUrl;
-      const config = { method, url };
-
-      if (data) {
-        if (method.toLowerCase() === 'get') {
-          config.params = data;
-        } else {
-          config.data = JSON.stringify(data);
-        }
-      }
-
-      const response = await this.client.request(config);
-      return { success: true, data: response.data, status: response.status };
-    } catch (error) {
-      console.error(`API request failed (attempt ${attempt}):`, error.message);
-
-      // Retry logic for network errors
-      if (attempt < this.retryAttempts && this.isRetryableError(error)) {
-        console.log(`Retrying request... (${attempt + 1}/${this.retryAttempts})`);
-        await this.delay(1000 * attempt); // Exponential backoff
-        return this.makeRequest(method, path, data, attempt + 1);
-      }
-
-      return {
-        success: false,
-        error: error.message,
-        status: error.response?.status || 0,
-        details: error.response?.data || null
-      };
-    }
-  }
-
-  async makeJSONPRequest(path = '', params = {}, attempt = 1) {
-    return new Promise((resolve) => {
-      try {
-        const callbackName = 'jsonp_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-
-        // Build URL with parameters - IMPORTANT: Use original baseUrl, not any redirect URL
-        const url = new URL(this.baseUrl);
-        if (path) url.searchParams.set('path', path);
-        Object.keys(params).forEach(key => {
-          url.searchParams.set(key, params[key]);
-        });
-        url.searchParams.set('callback', callbackName);
-
-        console.log('JSONP Request:', 'GET', url.toString());
-
-        // Create callback function
-        window[callbackName] = (data) => {
-          console.log('JSONP Response received:', data);
-          // Cleanup
-          document.head.removeChild(script);
-          delete window[callbackName];
-
-          resolve({
-            success: true,
-            data: data,
-            status: 200,
-            method: 'JSONP'
-          });
-        };
-
-        // Create script tag
-        const script = document.createElement('script');
-        script.src = url.toString();
-        script.onerror = () => {
-          console.error(`JSONP request failed (attempt ${attempt})`);
-
-          // Cleanup
-          document.head.removeChild(script);
-          delete window[callbackName];
-
-          // Retry logic
-          if (attempt < this.retryAttempts) {
-            console.log(`Retrying JSONP request... (${attempt + 1}/${this.retryAttempts})`);
-            setTimeout(() => {
-              this.makeJSONPRequest(path, params, attempt + 1).then(resolve);
-            }, 1000 * attempt);
-          } else {
-            resolve({
-              success: false,
-              error: 'JSONP request failed',
-              status: 0,
-              details: 'Network error or script loading failed'
-            });
-          }
-        };
-
-        // Set timeout for JSONP request
-        setTimeout(() => {
-          if (window[callbackName]) {
-            console.error('JSONP request timed out');
-            document.head.removeChild(script);
-            delete window[callbackName];
-
-            resolve({
-              success: false,
-              error: 'Request timed out',
-              status: 0,
-              details: 'JSONP request exceeded timeout'
-            });
-          }
-        }, this.timeout);
-
-        document.head.appendChild(script);
-
-      } catch (error) {
-        console.error('JSONP setup error:', error);
-        resolve({
-          success: false,
-          error: error.message,
-          status: 0,
-          details: 'JSONP setup failed'
-        });
-      }
-    });
-  }
-
-  isRetryableError(error) {
-    const retryableStatusCodes = [0, 408, 429, 500, 502, 503, 504];
-    const statusCode = error.response?.status || 0;
-    return retryableStatusCodes.includes(statusCode) || error.code === 'NETWORK_ERROR';
-  }
-
-  delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  async makeDirectFetchRequest(path = '', params = {}, attempt = 1) {
-    try {
-      // Build URL with parameters
-      const url = new URL(this.baseUrl);
-      if (path) url.searchParams.set('path', path);
-      Object.keys(params).forEach(key => {
-        url.searchParams.set(key, params[key]);
-      });
-
-      console.log('Direct Fetch Request:', 'GET', url.toString());
-
-      // Try fetch with no-cors mode to bypass CORS restrictions
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        mode: 'no-cors',
-        cache: 'no-cache',
-      });
-
-      console.log('Direct Fetch Response status:', response.status);
-      console.log('Direct Fetch Response type:', response.type);
-
-      if (response.type === 'opaque') {
-        // For opaque responses, we can't read the data but we know the request went through
-        console.log('⚠️ Opaque response - request succeeded but cannot read data due to CORS');
-        return {
-          success: false,
-          error: 'CORS restriction - response received but cannot read data',
-          status: 0,
-          details: 'Try JSONP fallback or use a CORS proxy'
-        };
-      }
-
-      const data = await response.json();
-      console.log('Direct Fetch Response data:', data);
-
-      return {
-        success: true,
-        data: data,
-        status: response.status,
-        method: 'Direct Fetch'
-      };
-    } catch (error) {
-      console.error(`Direct fetch failed (attempt ${attempt}):`, error.message);
-      throw error; // Re-throw to trigger JSONP fallback
-    }
   }
 
   async makeCorsProxyRequest(path = '', params = {}, attempt = 1) {
@@ -253,11 +37,10 @@ class GoogleAppsScriptClient {
         });
       }
 
-      // Use allorigins.win as CORS proxy (free and reliable)
+      // Use allorigins.win as CORS proxy
       const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl.toString())}`;
 
-      console.log('CORS Proxy Request:', 'GET', targetUrl.toString());
-      console.log('Via proxy:', proxyUrl);
+      console.log('Status Chat API Request:', targetUrl.toString());
 
       const response = await fetch(proxyUrl, {
         method: 'GET',
@@ -271,10 +54,9 @@ class GoogleAppsScriptClient {
       }
 
       const proxyData = await response.json();
-      console.log('CORS Proxy Response received');
 
       if (proxyData.status && proxyData.status.http_code !== 200) {
-        throw new Error(`Target API responded with ${proxyData.status.http_code}`);
+        throw new Error(`API responded with ${proxyData.status.http_code}`);
       }
 
       // Parse the actual response from the target API
@@ -282,11 +64,8 @@ class GoogleAppsScriptClient {
       try {
         actualData = JSON.parse(proxyData.contents);
       } catch (e) {
-        // If it's not JSON, return the raw content
         actualData = proxyData.contents;
       }
-
-      console.log('Parsed API Response data:', actualData);
 
       return {
         success: true,
@@ -296,11 +75,10 @@ class GoogleAppsScriptClient {
       };
 
     } catch (error) {
-      console.error(`CORS proxy request failed (attempt ${attempt}):`, error.message);
+      console.error(`Status Chat API request failed (attempt ${attempt}):`, error.message);
 
       // Retry logic
       if (attempt < this.retryAttempts) {
-        console.log(`Retrying CORS proxy request... (${attempt + 1}/${this.retryAttempts})`);
         await this.delay(1000 * attempt);
         return this.makeCorsProxyRequest(path, params, attempt + 1);
       }
@@ -309,188 +87,243 @@ class GoogleAppsScriptClient {
         success: false,
         error: error.message,
         status: 0,
-        details: 'CORS proxy request failed after all retries'
+        details: 'API request failed after all retries'
       };
     }
   }
 
-  // API method implementations
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // API method implementations for status chat
+  async getStatuses() {
+    return this.makeCorsProxyRequest('statuses');
+  }
+
+  async updateStatus(name, status) {
+    return this.makeCorsProxyRequest('update-status', {
+      name: name,
+      status: status,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   async healthCheck() {
-    return this.makeRequest('GET', 'health');
-  }
-
-  async getData(filters = {}) {
-    return this.makeRequest('GET', 'data', filters);
-  }
-
-  async submitForm(formData) {
-    return this.makeRequest('POST', 'submit', formData);
-  }
-
-  async processData(data) {
-    return this.makeRequest('POST', 'process', data);
+    return this.makeCorsProxyRequest('health');
   }
 }
 
-// UI Controller Class
-class UIController {
+// Status Chat UI Controller
+class StatusChatUI {
   constructor(apiClient) {
     this.apiClient = apiClient;
     this.elements = {};
     this.initializeElements();
     this.bindEvents();
-    this.updateEnvironmentInfo();
+    this.loadConfiguration();
+    this.startApp();
   }
 
   initializeElements() {
+    // User input elements
+    this.elements.username = document.getElementById('username');
+    this.elements.userStatus = document.getElementById('user-status');
+    this.elements.updateStatusBtn = document.getElementById('update-status');
+
+    // Status feed elements
+    this.elements.statusList = document.getElementById('status-list');
+    this.elements.refreshBtn = document.getElementById('refresh-btn');
+    this.elements.lastUpdated = document.getElementById('last-updated');
+    this.elements.userCount = document.getElementById('user-count');
+
     // Configuration elements
     this.elements.apiUrl = document.getElementById('api-url');
     this.elements.saveConfig = document.getElementById('save-config');
 
-    // Test buttons
-    this.elements.healthCheck = document.getElementById('health-check');
-    this.elements.getData = document.getElementById('get-data');
-    this.elements.submitForm = document.getElementById('submit-form');
-    this.elements.processBtn = document.getElementById('process-btn');
-
-    // Result containers
-    this.elements.healthResult = document.getElementById('health-result');
-    this.elements.dataResult = document.getElementById('data-result');
-    this.elements.submitResult = document.getElementById('submit-result');
-    this.elements.processResult = document.getElementById('process-result');
-
     // Status elements
-    this.elements.status = document.getElementById('status');
     this.elements.statusText = document.getElementById('status-text');
     this.elements.statusIcon = document.getElementById('status-icon');
-    this.elements.corsStatus = document.getElementById('cors-status');
-
-    // Data input
-    this.elements.processData = document.getElementById('process-data');
+    this.elements.autoRefreshStatus = document.getElementById('auto-refresh-status');
   }
 
   bindEvents() {
-    // Configuration
-    this.elements.saveConfig.addEventListener('click', () => this.saveConfiguration());
-
-    // API tests
-    this.elements.healthCheck.addEventListener('click', () => this.testHealthCheck());
-    this.elements.getData.addEventListener('click', () => this.testGetData());
-    this.elements.processBtn.addEventListener('click', () => this.testProcessData());
-
-    // Form submission
-    this.elements.submitForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      this.testFormSubmission(e.target);
+    // User input events
+    this.elements.updateStatusBtn.addEventListener('click', () => this.updateUserStatus());
+    this.elements.userStatus.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.updateUserStatus();
     });
 
-    // Auto-save URL on change
+    // Refresh events
+    this.elements.refreshBtn.addEventListener('click', () => this.refreshStatuses());
+
+    // Configuration events
+    this.elements.saveConfig.addEventListener('click', () => this.saveConfiguration());
     this.elements.apiUrl.addEventListener('change', () => this.saveConfiguration());
+
+    // Auto-save username and status
+    this.elements.username.addEventListener('change', () => this.saveUserData());
+    this.elements.userStatus.addEventListener('change', () => this.saveUserData());
+  }
+
+  async startApp() {
+    this.updateConnectionStatus('connecting', 'Connecting to chat server...');
+
+    // Check API health
+    const healthResult = await this.apiClient.healthCheck();
+
+    if (healthResult.success) {
+      this.updateConnectionStatus('connected', 'Connected to chat server');
+      this.loadUserData();
+      this.startAutoRefresh();
+      this.refreshStatuses();
+    } else {
+      this.updateConnectionStatus('error', 'Failed to connect to chat server');
+      this.showEmptyState('Cannot connect to chat server. Check configuration.');
+    }
+  }
+
+  async updateUserStatus() {
+    const name = this.elements.username.value.trim();
+    const status = this.elements.userStatus.value.trim();
+
+    if (!name || !status) {
+      alert('Please enter both your name and status message.');
+      return;
+    }
+
+    this.setButtonLoading(this.elements.updateStatusBtn, true);
+
+    const result = await this.apiClient.updateStatus(name, status);
+
+    if (result.success) {
+      this.saveUserData();
+      this.refreshStatuses();
+      // Clear status input for next update
+      this.elements.userStatus.value = '';
+      this.elements.userStatus.focus();
+    } else {
+      alert('Failed to update status: ' + result.error);
+    }
+
+    this.setButtonLoading(this.elements.updateStatusBtn, false);
+  }
+
+  async refreshStatuses() {
+    this.setButtonLoading(this.elements.refreshBtn, true);
+
+    const result = await this.apiClient.getStatuses();
+
+    if (result.success) {
+      this.displayStatuses(result.data);
+      this.updateLastRefreshed();
+    } else {
+      console.error('Failed to refresh statuses:', result.error);
+      this.showEmptyState('Failed to load statuses. ' + result.error);
+    }
+
+    this.setButtonLoading(this.elements.refreshBtn, false);
+  }
+
+  displayStatuses(data) {
+    const statuses = data.statuses || [];
+
+    if (statuses.length === 0) {
+      this.showEmptyState('No status updates yet. Be the first to share what you\'re up to!');
+      return;
+    }
+
+    const statusesHTML = statuses.map(status => {
+      const timeAgo = this.getTimeAgo(status.timestamp);
+      return `
+        <div class="status-item">
+          <div class="status-user">
+            <div class="status-name">${this.escapeHtml(status.name)}</div>
+            <div class="status-message">${this.escapeHtml(status.status)}</div>
+          </div>
+          <div class="status-time">${timeAgo}</div>
+        </div>
+      `;
+    }).join('');
+
+    this.elements.statusList.innerHTML = statusesHTML;
+    this.elements.userCount.textContent = `${statuses.length} users online`;
+  }
+
+  showEmptyState(message) {
+    this.elements.statusList.innerHTML = `
+      <div class="empty-message">
+        <h3>💭 ${message}</h3>
+        <p>Status updates will appear here in real-time.</p>
+      </div>
+    `;
+    this.elements.userCount.textContent = '0 users online';
+  }
+
+  startAutoRefresh() {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
+
+    // Refresh every 10 seconds
+    this.refreshInterval = setInterval(() => {
+      if (this.autoRefreshEnabled) {
+        this.refreshStatuses();
+      }
+    }, 10000);
+  }
+
+  updateLastRefreshed() {
+    const now = new Date();
+    this.elements.lastUpdated.textContent = `Last updated: ${now.toLocaleTimeString()}`;
+  }
+
+  updateConnectionStatus(type, message) {
+    this.elements.statusText.textContent = message;
+
+    const icons = {
+      connecting: '⏳',
+      connected: '✅',
+      error: '❌'
+    };
+
+    this.elements.statusIcon.textContent = icons[type] || '⚪';
   }
 
   saveConfiguration() {
     const url = this.elements.apiUrl.value.trim();
     if (!url) {
-      this.showError('Please enter a valid Google Apps Script URL');
+      alert('Please enter a valid Google Apps Script URL');
       return;
     }
 
     try {
       new URL(url); // Validate URL format
       this.apiClient.setBaseUrl(url);
-      localStorage.setItem('gas-api-url', url);
-      this.updateStatus('configured', 'Configuration saved');
-      console.log('API URL configured:', url);
+      localStorage.setItem('chat-api-url', url);
+      console.log('Chat API URL configured:', url);
     } catch (error) {
-      this.showError('Invalid URL format');
+      alert('Invalid URL format');
     }
   }
 
-  async testHealthCheck() {
-    this.setButtonLoading(this.elements.healthCheck, true);
-    this.updateStatus('loading', 'Testing health endpoint...');
-
-    const result = await this.apiClient.healthCheck();
-    this.displayResult(this.elements.healthResult, result);
-
-    if (result.success) {
-      this.updateStatus('connected', 'API is healthy');
-      this.elements.corsStatus.textContent = 'Working';
-      this.elements.corsStatus.style.color = '#27ae60';
-    } else {
-      this.updateStatus('error', 'Health check failed');
-      this.elements.corsStatus.textContent = 'Error';
-      this.elements.corsStatus.style.color = '#e74c3c';
+  loadConfiguration() {
+    const savedUrl = localStorage.getItem('chat-api-url');
+    if (savedUrl) {
+      this.elements.apiUrl.value = savedUrl;
+      this.apiClient.setBaseUrl(savedUrl);
     }
-
-    this.setButtonLoading(this.elements.healthCheck, false);
   }
 
-  async testGetData() {
-    this.setButtonLoading(this.elements.getData, true);
-
-    const result = await this.apiClient.getData({ filter: 'sample' });
-    this.displayResult(this.elements.dataResult, result);
-
-    this.setButtonLoading(this.elements.getData, false);
+  saveUserData() {
+    localStorage.setItem('chat-username', this.elements.username.value);
   }
 
-  async testFormSubmission(form) {
-    const submitBtn = form.querySelector('button[type="submit"]');
-    this.setButtonLoading(submitBtn, true);
-
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-
-    const result = await this.apiClient.submitForm(data);
-    this.displayResult(this.elements.submitResult, result);
-
-    if (result.success) {
-      form.reset();
+  loadUserData() {
+    const savedUsername = localStorage.getItem('chat-username');
+    if (savedUsername) {
+      this.elements.username.value = savedUsername;
     }
-
-    this.setButtonLoading(submitBtn, false);
-  }
-
-  async testProcessData() {
-    this.setButtonLoading(this.elements.processBtn, true);
-
-    let data;
-    try {
-      data = JSON.parse(this.elements.processData.value || '{}');
-    } catch (error) {
-      this.displayResult(this.elements.processResult, {
-        success: false,
-        error: 'Invalid JSON format',
-        details: error.message
-      });
-      this.setButtonLoading(this.elements.processBtn, false);
-      return;
-    }
-
-    const result = await this.apiClient.processData(data);
-    this.displayResult(this.elements.processResult, result);
-
-    this.setButtonLoading(this.elements.processBtn, false);
-  }
-
-  displayResult(element, result) {
-    element.textContent = JSON.stringify(result, null, 2);
-    element.scrollTop = 0;
-  }
-
-  updateStatus(type, message) {
-    this.elements.statusText.textContent = message;
-    this.elements.status.className = `status-indicator ${type}`;
-
-    const icons = {
-      loading: '⏳',
-      connected: '✅',
-      error: '❌',
-      configured: '🔧'
-    };
-
-    this.elements.statusIcon.textContent = icons[type] || '⚪';
   }
 
   setButtonLoading(button, isLoading) {
@@ -504,54 +337,49 @@ class UIController {
     }
   }
 
-  showError(message) {
-    alert(message); // Replace with better error handling in production
-  }
+  getTimeAgo(timestamp) {
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
 
-  updateEnvironmentInfo() {
-    const envInfo = document.getElementById('env-info');
-    const isDev = __DEV__;
-    const isProd = __PROD__;
-    const isGitHubPages = window.location.hostname.includes('github.io');
+      if (diffMins < 1) return 'just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
 
-    let envText = 'Unknown';
-    if (isDev) envText = 'Development';
-    else if (isProd && isGitHubPages) envText = 'Production (GitHub Pages)';
-    else if (isProd) envText = 'Production';
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
 
-    envInfo.textContent = envText;
-  }
-
-  // Load saved configuration on startup
-  loadSavedConfiguration() {
-    const savedUrl = localStorage.getItem('gas-api-url');
-    if (savedUrl) {
-      this.elements.apiUrl.value = savedUrl;
-      this.apiClient.setBaseUrl(savedUrl);
-      this.updateStatus('configured', 'Loaded saved configuration');
+      const diffDays = Math.floor(diffHours / 24);
+      return `${diffDays}d ago`;
+    } catch (error) {
+      return 'unknown';
     }
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 }
 
 // Application initialization
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('🚀 Vite + GitHub Pages + Google Apps Script - Starting...');
+  console.log('🚀 Status Chat - Starting...');
   console.log('WFGY Framework Version:', WFGY_CONFIG.core_version);
 
   // Initialize API client and UI
-  const apiClient = new GoogleAppsScriptClient();
-  const uiController = new UIController(apiClient);
-
-  // Load any saved configuration
-  uiController.loadSavedConfiguration();
+  const defaultApiUrl = 'https://script.google.com/macros/s/AKfycbwbuNFKWOI4ssCT307_ocDYlryAUMl21qSscrGdH2q6ta5hRja3KukhHJPvO3fQ5NM8Jw/exec';
+  const apiClient = new StatusChatClient(defaultApiUrl);
+  const chatUI = new StatusChatUI(apiClient);
 
   // Global error handling
   window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason);
-    uiController.updateStatus('error', 'Application error occurred');
   });
 
-  console.log('✅ Application initialized successfully');
+  console.log('✅ Status Chat initialized successfully');
 });
 
 // Export for debugging
