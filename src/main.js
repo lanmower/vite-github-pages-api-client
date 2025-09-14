@@ -102,7 +102,7 @@ class GoogleAppsScriptClient {
       try {
         const callbackName = 'jsonp_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
-        // Build URL with parameters
+        // Build URL with parameters - IMPORTANT: Use original baseUrl, not any redirect URL
         const url = new URL(this.baseUrl);
         if (path) url.searchParams.set('path', path);
         Object.keys(params).forEach(key => {
