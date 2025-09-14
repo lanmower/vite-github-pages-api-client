@@ -59,15 +59,9 @@ class GoogleAppsScriptClient {
   }
 
   async makeRequest(method, path = '', data = null, attempt = 1) {
-    // Use JSONP for Google Apps Script GET requests to avoid CORS issues
+    // Use CORS proxy for Google Apps Script GET requests to avoid CORS issues
     if (method.toLowerCase() === 'get' && this.baseUrl.includes('script.google.com')) {
-      // Try both JSONP and direct fetch approaches
-      try {
-        return await this.makeDirectFetchRequest(path, data, attempt);
-      } catch (error) {
-        console.log('Direct fetch failed, trying JSONP fallback...');
-        return this.makeJSONPRequest(path, data, attempt);
-      }
+      return this.makeCorsProxyRequest(path, data, attempt);
     }
 
     try {
@@ -243,6 +237,76 @@ class GoogleAppsScriptClient {
     } catch (error) {
       console.error(`Direct fetch failed (attempt ${attempt}):`, error.message);
       throw error; // Re-throw to trigger JSONP fallback
+    }
+  }
+
+  async makeCorsProxyRequest(path = '', params = {}, attempt = 1) {
+    try {
+      // Build target URL with parameters
+      const targetUrl = new URL(this.baseUrl);
+      if (path) targetUrl.searchParams.set('path', path);
+      Object.keys(params).forEach(key => {
+        targetUrl.searchParams.set(key, params[key]);
+      });
+
+      // Use allorigins.win as CORS proxy (free and reliable)
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl.toString())}`;
+
+      console.log('CORS Proxy Request:', 'GET', targetUrl.toString());
+      console.log('Via proxy:', proxyUrl);
+
+      const response = await fetch(proxyUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Proxy response ${response.status}: ${response.statusText}`);
+      }
+
+      const proxyData = await response.json();
+      console.log('CORS Proxy Response received');
+
+      if (proxyData.status && proxyData.status.http_code !== 200) {
+        throw new Error(`Target API responded with ${proxyData.status.http_code}`);
+      }
+
+      // Parse the actual response from the target API
+      let actualData;
+      try {
+        actualData = JSON.parse(proxyData.contents);
+      } catch (e) {
+        // If it's not JSON, return the raw content
+        actualData = proxyData.contents;
+      }
+
+      console.log('Parsed API Response data:', actualData);
+
+      return {
+        success: true,
+        data: actualData,
+        status: proxyData.status?.http_code || 200,
+        method: 'CORS Proxy'
+      };
+
+    } catch (error) {
+      console.error(`CORS proxy request failed (attempt ${attempt}):`, error.message);
+
+      // Retry logic
+      if (attempt < this.retryAttempts) {
+        console.log(`Retrying CORS proxy request... (${attempt + 1}/${this.retryAttempts})`);
+        await this.delay(1000 * attempt);
+        return this.makeCorsProxyRequest(path, params, attempt + 1);
+      }
+
+      return {
+        success: false,
+        error: error.message,
+        status: 0,
+        details: 'CORS proxy request failed after all retries'
+      };
     }
   }
 
