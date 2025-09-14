@@ -33,36 +33,44 @@ function doGet(e) {
         responseData = {
           status: 'healthy',
           timestamp: new Date().toISOString(),
-          version: WFGY_CONFIG.api_version
+          version: WFGY_CONFIG.api_version,
+          message: 'Google Apps Script API is working!'
         };
         break;
 
       case 'data':
         responseData = {
+          success: true,
           users: [
-            { id: 1, name: 'John Doe', email: 'john@example.com' },
-            { id: 2, name: 'Jane Smith', email: 'jane@example.com' }
+            { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Admin' },
+            { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'User' },
+            { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'User' }
           ],
           timestamp: new Date().toISOString(),
           source: 'google-apps-script',
           filter_applied: params.filter || null,
-          wfgy_version: WFGY_CONFIG.core_version
+          wfgy_version: WFGY_CONFIG.core_version,
+          total_records: 3
         };
         break;
 
       default:
         responseData = {
-          message: 'API Ready',
+          message: 'API Ready - WFGY v2.0 Enabled',
           endpoints: ['/health', '/data'],
           version: WFGY_CONFIG.api_version,
-          cors_enabled: WFGY_CONFIG.cors_enabled
+          cors_enabled: WFGY_CONFIG.cors_enabled,
+          wfgy_framework: WFGY_CONFIG.core_version,
+          timestamp: new Date().toISOString()
         };
     }
 
     // Handle JSONP callback for CORS compatibility with GitHub Pages
     if (callback) {
       const jsonpResponse = callback + '(' + JSON.stringify(responseData) + ');';
-      console.log('JSONP Response for callback:', callback, 'Data:', JSON.stringify(responseData));
+      console.log('JSONP Response for callback:', callback);
+
+      // Return as JavaScript to enable JSONP
       return ContentService
         .createTextOutput(jsonpResponse)
         .setMimeType(ContentService.MimeType.JAVASCRIPT);

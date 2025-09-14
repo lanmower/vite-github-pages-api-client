@@ -61,7 +61,13 @@ class GoogleAppsScriptClient {
   async makeRequest(method, path = '', data = null, attempt = 1) {
     // Use JSONP for Google Apps Script GET requests to avoid CORS issues
     if (method.toLowerCase() === 'get' && this.baseUrl.includes('script.google.com')) {
-      return this.makeJSONPRequest(path, data, attempt);
+      // Try both JSONP and direct fetch approaches
+      try {
+        return await this.makeDirectFetchRequest(path, data, attempt);
+      } catch (error) {
+        console.log('Direct fetch failed, trying JSONP fallback...');
+        return this.makeJSONPRequest(path, data, attempt);
+      }
     }
 
     try {
@@ -191,6 +197,53 @@ class GoogleAppsScriptClient {
 
   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async makeDirectFetchRequest(path = '', params = {}, attempt = 1) {
+    try {
+      // Build URL with parameters
+      const url = new URL(this.baseUrl);
+      if (path) url.searchParams.set('path', path);
+      Object.keys(params).forEach(key => {
+        url.searchParams.set(key, params[key]);
+      });
+
+      console.log('Direct Fetch Request:', 'GET', url.toString());
+
+      // Try fetch with no-cors mode to bypass CORS restrictions
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        mode: 'no-cors',
+        cache: 'no-cache',
+      });
+
+      console.log('Direct Fetch Response status:', response.status);
+      console.log('Direct Fetch Response type:', response.type);
+
+      if (response.type === 'opaque') {
+        // For opaque responses, we can't read the data but we know the request went through
+        console.log('⚠️ Opaque response - request succeeded but cannot read data due to CORS');
+        return {
+          success: false,
+          error: 'CORS restriction - response received but cannot read data',
+          status: 0,
+          details: 'Try JSONP fallback or use a CORS proxy'
+        };
+      }
+
+      const data = await response.json();
+      console.log('Direct Fetch Response data:', data);
+
+      return {
+        success: true,
+        data: data,
+        status: response.status,
+        method: 'Direct Fetch'
+      };
+    } catch (error) {
+      console.error(`Direct fetch failed (attempt ${attempt}):`, error.message);
+      throw error; // Re-throw to trigger JSONP fallback
+    }
   }
 
   // API method implementations
