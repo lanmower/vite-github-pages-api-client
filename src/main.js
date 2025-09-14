@@ -23,72 +23,78 @@ class StatusChatClient {
     this.baseUrl = url;
   }
 
-  async makeCorsProxyRequest(path = '', params = {}, attempt = 1) {
-    try {
-      // Build target URL with parameters
-      const targetUrl = new URL(this.baseUrl);
-      if (path) targetUrl.searchParams.set('path', path);
-      if (params && typeof params === 'object') {
-        Object.keys(params).forEach(key => {
-          if (params[key] !== undefined && params[key] !== null) {
-            targetUrl.searchParams.set(key, params[key]);
+  async makeJSONPRequest(path = '', params = {}, attempt = 1) {
+    return new Promise((resolve) => {
+      try {
+        // Build target URL with parameters
+        const targetUrl = new URL(this.baseUrl);
+        if (path) targetUrl.searchParams.set('path', path);
+        if (params && typeof params === 'object') {
+          Object.keys(params).forEach(key => {
+            if (params[key] !== undefined && params[key] !== null) {
+              targetUrl.searchParams.set(key, params[key]);
+            }
+          });
+        }
+
+        console.log('Status Chat API Request:', targetUrl.toString());
+
+        const callbackName = 'jsonp_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const script = document.createElement('script');
+
+        // Set timeout
+        const timeoutId = setTimeout(() => {
+          if (window[callbackName]) {
+            delete window[callbackName];
           }
+          document.head.removeChild(script);
+          resolve({
+            success: false,
+            error: 'Request timeout',
+            status: 0,
+            details: 'JSONP request timed out'
+          });
+        }, this.timeout);
+
+        window[callbackName] = function(data) {
+          clearTimeout(timeoutId);
+          document.head.removeChild(script);
+          delete window[callbackName];
+
+          resolve({
+            success: true,
+            data: data,
+            status: 200,
+            method: 'JSONP'
+          });
+        };
+
+        script.onerror = function() {
+          clearTimeout(timeoutId);
+          if (window[callbackName]) {
+            delete window[callbackName];
+          }
+          document.head.removeChild(script);
+          resolve({
+            success: false,
+            error: 'Network error',
+            status: 0,
+            details: 'Failed to load JSONP script'
+          });
+        };
+
+        script.src = targetUrl.toString() + '&callback=' + callbackName;
+        document.head.appendChild(script);
+
+      } catch (error) {
+        resolve({
+          success: false,
+          error: error.message,
+          status: 0,
+          details: 'JSONP request setup failed'
         });
       }
-
-      // Use allorigins.win as CORS proxy
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl.toString())}`;
-
-      console.log('Status Chat API Request:', targetUrl.toString());
-
-      const response = await fetch(proxyUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Proxy response ${response.status}: ${response.statusText}`);
-      }
-
-      const proxyData = await response.json();
-
-      if (proxyData.status && proxyData.status.http_code !== 200) {
-        throw new Error(`API responded with ${proxyData.status.http_code}`);
-      }
-
-      // Parse the actual response from the target API
-      let actualData;
-      try {
-        actualData = JSON.parse(proxyData.contents);
-      } catch (e) {
-        actualData = proxyData.contents;
-      }
-
-      return {
-        success: true,
-        data: actualData,
-        status: proxyData.status?.http_code || 200,
-        method: 'CORS Proxy'
-      };
-
-    } catch (error) {
-      console.error(`Status Chat API request failed (attempt ${attempt}):`, error.message);
-
-      // Retry logic
-      if (attempt < this.retryAttempts) {
-        await this.delay(1000 * attempt);
-        return this.makeCorsProxyRequest(path, params, attempt + 1);
-      }
-
-      return {
-        success: false,
-        error: error.message,
-        status: 0,
-        details: 'API request failed after all retries'
-      };
-    }
+    });
   }
 
   delay(ms) {
@@ -97,11 +103,11 @@ class StatusChatClient {
 
   // API method implementations for status chat
   async getStatuses() {
-    return this.makeCorsProxyRequest('statuses');
+    return this.makeJSONPRequest('statuses');
   }
 
   async updateStatus(name, status) {
-    return this.makeCorsProxyRequest('update-status', {
+    return this.makeJSONPRequest('update-status', {
       name: name,
       status: status,
       timestamp: new Date().toISOString()
@@ -109,7 +115,7 @@ class StatusChatClient {
   }
 
   async healthCheck() {
-    return this.makeCorsProxyRequest('health');
+    return this.makeJSONPRequest('health');
   }
 }
 
